@@ -1,0 +1,305 @@
+﻿@page "/createtask"
+@page "/createtask/{projcode}"
+
+@inject NavigationManager NavigationManager
+@inject IRoleService RoleService
+@inject IUserService UserService
+@inject IProjectService ProjectService
+@inject IProjectTaskService ProjectTaskService
+@inject ILocalStorage LocalStorage
+@inject AuthService authService
+
+
+@if (authService.CurrentRoleName == "administrator" || authService.CurrentRoleName == "projectmanager")
+{
+
+    <table class="table">
+        <thead>
+            <tr>
+                @if (projcode == null)
+                {
+                    <th style="width: 6%" @onclick="(() => Cancel())"><h2>Tasks </h2></th>
+                    <th style="width: 94%"><h2>> Create a Task</h2></th>
+                }
+                else
+                {
+                    <th style="width: 6%" @onclick="(() => Cancel())"><h2>Tasks </h2></th>
+                    <th style="width: 21%" @onclick="(() => CancelPartial())"><h2>> Single Project Tasks</h2></th>
+                    <th style="width: 73%"><h2>> Create a Task</h2></th>
+                }
+            </tr>
+        </thead>
+    </table>
+
+    <EditForm Model="task" OnSubmit="HandleSubmit">
+        <table class="table table-bordered table-hover" style="width:50%">
+            <thead>
+                <tr>
+                    <td style="vertical-align: middle;">
+                        @if (forProj)
+                        {
+                            <div>
+                                <label for="code">Project</label>
+                                <InputText id="role" @bind-Value="task.ParentProjectProjectCode" class="form-control" disabled></InputText>
+                            </div>
+                        }
+                        else
+                        {
+                            <div>
+                                <label for="code">Project</label>
+                                <InputSelect id="role" @bind-Value="task.ParentProjectProjectCode" class="form-control">
+                                    <option selected hidden>Choose...</option>
+                                    @foreach (var proj in ProjectService.Projects)
+                                    {
+                                        if (authService.CurrentRoleName == "administrator" || authService.CurrentRoleName == "projectmanager" && ManagedByMe(proj))
+                                        {
+                                            <option value="@proj.ProjectCode">@NameOfProject(proj)</option>
+                                        }
+
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <div>
+                            <label for="name">Deadline</label>
+                            <InputDate id="name" @bind-Value="task.Deadline" @bind-Value:format="dd/MM/yyyy" class="form-control" placeholder="Name" required></InputDate>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="vertical-align: middle;">
+                        <div>
+                            <label for="user">Assign Task to</label>
+                            <InputSelect id="user" @bind-Value="task.AssigneeUsername" class="form-control" required>
+                                <option selected hidden>Choose...</option>
+                                @foreach (var user in UserService.Users)
+                                {
+                                    if (authService.CurrentRoleName == "administrator" || (authService.CurrentRoleName == "projectmanager" && OnlyDevelopers(user)))
+                                    {
+                                        if (CheckAvailableDeveloper(user))
+                                        {
+                                            <option value="@user.Username">@NameOfUser(user)</option>
+                                        }
+                                    }
+
+                                }
+                            </InputSelect>
+                        </div>
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <div>
+                            <label for="name">Description</label>
+                            <InputTextArea id="name" @bind-Value="task.Description" @bind-Value:format="dd/MM/yyyy" class="form-control" placeholder="Description" required></InputTextArea>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <th>
+
+                    </th>
+                    <th>
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <button style="width: 100%" class="btn btn-secondary" @onclick="(() => CancelPartial())">
+                                        <span aria-hidden="true">&times;</span>
+                                        Cancel
+                                    </button>
+                                </div>
+                                <div class="col-sm-6">
+                                    <button style="width: 100%" class="btn btn-success" @onclick="(() => SaveEdits())">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save" viewBox="0 0 16 16">
+                                        <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z" />
+                                    </svg>
+                                    Save
+                                </button>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                    </th>
+                </tr>
+            </thead>
+
+        </table>
+
+        @if (messageShow)
+        {
+            <div class="mb-3">
+                <label class="form-label" style="color: red">Invalid data. Try again.</label>
+            </div>
+        }
+
+
+
+    </EditForm>
+}
+
+
+@code {
+    [Parameter]
+    public string? projcode { get; set; }
+
+    private bool forProj = false;
+    private string currentRole = "";
+    private string loggedIn = "";
+    private string loggedInName = "";
+    private string loggedInSurname = "";
+
+    public ProjectTask task = new ProjectTask { Deadline = DateTime.Today};
+    private bool messageShow = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        if(projcode != null)
+        {
+            forProj = true;
+            task.ParentProjectProjectCode = projcode;
+        }
+        currentRole = authService.CurrentRoleName;
+        authService.SetCurrentRoleName(await LocalStorage.GetStringAsync("loggedInRoleName"));
+        loggedIn = await LocalStorage.GetStringAsync("loggedIn");
+        loggedInName = await LocalStorage.GetStringAsync("loggedInName");
+        loggedInSurname = await LocalStorage.GetStringAsync("loggedInSurname");
+        await ProjectService.GetProjects();
+        await UserService.GetUsers();
+
+        if(currentRole == "projectmanager")
+        {
+        }
+        //await UserService.GetUsers();
+
+        //username = await LocalStorage.GetStringAsync("user");
+        //username = null;
+        //loggedInName = await LocalStorage.GetStringAsync("loggedInName");
+        //loggedInSurname = await LocalStorage.GetStringAsync("loggedInSurname");
+        //authService.SetCurrentRoleName("administrator");
+
+        //await RoleService.GetRoles();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("tasks");
+    }
+    private void CancelPartial()
+    {
+        NavigationManager.NavigateTo($"tasks/{projcode}");
+
+    }
+
+    private async void SaveEdits()
+    {
+        if (task.ParentProjectProjectCode == null || task.ParentProjectProjectCode == "" ||
+            task.Deadline.CompareTo(DateTime.Today) < 0 ||
+            task.AssigneeUsername == null || task.AssigneeUsername == "" ||
+            task.Description == null || task.Description == "")
+        {
+            messageShow = true;
+        }
+        else
+        {
+            var result = await ProjectTaskService.CreateProjectTask(task);
+            if (result.IsSuccessStatusCode)
+            {
+                if(projcode == null)
+                {
+                    NavigationManager.NavigateTo("tasks");
+                }
+                else
+                {
+                    NavigationManager.NavigateTo($"tasks/{projcode}");
+                }
+            }
+            else
+            {
+                NavigationManager.NavigateTo("error/createtask");
+            }
+        }
+
+    }
+
+
+    private async void HandleSubmit()
+    {
+        //await UserService.UpdateUser(user, username);
+        //NavigationManager.NavigateTo("administrator/users");
+    }
+
+    private string NameOfUser(User u)
+    {
+        return u.Name + " " + u.Surname + "  [" + u.Username + "]";
+    }
+
+    private string NameOfProject(Project u)
+    {
+        return u.ProjectName + "  [" + u.ProjectCode + "]";
+    }
+
+    private bool CheckIfProjectManager(User u)
+    {
+        var r = RoleService.Roles.SingleOrDefault(r => r.RoleId == u.RoleId);
+        if (r != null)
+        {
+            return r.RoleName == "Project Manager";
+        }
+        return false;
+    }
+
+    private bool ManagedByMe(Project p)
+    {
+        return p.ProjectManagerUsername == loggedIn;
+    }
+
+    private bool OnlyDevelopers(User u)
+    {
+        return u.RoleId == 1;
+    }
+
+    private bool CheckAvailableDeveloper(User u)
+    {
+        var r = RoleService.Roles.SingleOrDefault(r => r.RoleId == u.RoleId);
+        if (r != null)
+        {
+            if(r.RoleName == "Developer" && ProjectTaskService.ProjectTasks.Where(t => t.AssigneeUsername == u.Username).ToArray().Length >= 3) return false;
+            return true;
+        }
+        return false;
+    }
+
+    public async Task<bool> testCreateTask(ProjectTask t)
+    {
+        task = t;
+        if (task.ParentProjectProjectCode == null || task.ParentProjectProjectCode == "" ||
+            task.Deadline.CompareTo(DateTime.Today) < 0 ||
+            task.AssigneeUsername == null || task.AssigneeUsername == "" ||
+            task.Description == null || task.Description == "")
+        {
+            return false;
+        }
+        else
+        {
+            var result = await ProjectTaskService.CreateProjectTask(task);
+            if (result.IsSuccessStatusCode)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+
+}

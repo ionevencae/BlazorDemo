@@ -1,0 +1,122 @@
+﻿@page "/profile"
+
+@inject IRoleService RoleService
+@inject IUserService UserService
+@inject ILocalStorage LocalStorage
+@inject AuthService authService
+@inject NavigationManager NavigationManager
+
+<table class="table">
+    <thead>
+        <tr>
+            <th style="width: 36%" ><h2>Profile </h2></th>
+
+            <th>
+                <h3><button style="width: 20%" class="btn btn-danger" @onclick="(() => Logout())">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z" />
+                            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
+                        </svg>
+                    Log out
+                </button></h3>
+            </th>
+        </tr>
+    </thead>
+</table>
+
+<EditForm Model="user" OnSubmit="HandleSubmit">
+    <table class="table table-bordered table-hover" style="width:50%">
+        <thead>
+            <tr>
+                <td style="vertical-align: middle;">
+                    <div>
+                        <label for="name">Name</label>
+                        <InputText id="name" @bind-Value="user.Name" class="form-control" placeholder="Name" readonly></InputText>
+                    </div>
+                </td>
+                <td style="vertical-align: middle;">
+                    <div>
+                        <label for="surname">Surname</label>
+                        <InputText id="surname" @bind-Value="user.Surname" class="form-control" placeholder="Surname" readonly></InputText>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td style="vertical-align: middle;">
+                    <div>
+                        <label for="username">Username</label>
+                        <InputText id="username" @bind-Value="user.Username" class="form-control" placeholder="Username" readonly></InputText>
+                    </div>
+                </td>
+                <td style="vertical-align: middle;">
+                    <div>
+                        <label for="password">Password</label>
+                        <InputText id="password" @bind-Value="user.Password" class="form-control" placeholder="Password" readonly></InputText>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td style="vertical-align: middle;">
+                    <div>
+                        <label for="email">E-mail</label>
+                        <InputText id="email" @bind-Value="user.Email" class="form-control" placeholder="name@example.com" readonly></InputText>
+                    </div>
+                </td>
+                <td style="vertical-align: middle;">
+                    <div>
+                        <label for="role">Role</label>
+                        <InputSelect disabled id="role" @bind-Value="user.RoleId" class="form-control">
+                            @foreach (var role in RoleService.Roles)
+                            {
+                                <option value="@role.RoleId">@role.RoleName</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </td>
+            </tr>
+        </thead>
+
+    </table>
+    
+    
+    
+</EditForm>
+
+@code {
+    User user = new User { };
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        authService.OnChange += () => StateHasChanged();
+
+        await base.OnInitializedAsync();
+        string username = await LocalStorage.GetStringAsync("loggedIn");
+        user = UserService.Users.SingleOrDefault(u => u.Username == username, user);
+
+        //username = null;
+        //loggedInName = await LocalStorage.GetStringAsync("loggedInName");
+        //loggedInSurname = await LocalStorage.GetStringAsync("loggedInSurname");
+        //authService.SetCurrentRoleName("administrator");
+
+        await RoleService.GetRoles();
+    }
+
+
+    private void HandleSubmit()
+    {
+
+    }
+
+    private async Task Logout()
+    {
+        user = new User();
+
+        authService.SetCurrentRoleName("");
+        await LocalStorage.RemoveAsync("loggedIn");
+        await LocalStorage.RemoveAsync("loggedInName");
+        await LocalStorage.RemoveAsync("loggedInSurname");
+        await LocalStorage.RemoveAsync("loggedInRoleName");
+        NavigationManager.NavigateTo("");
+    }
+}

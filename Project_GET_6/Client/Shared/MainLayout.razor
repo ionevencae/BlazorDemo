@@ -1,0 +1,49 @@
+﻿@inherits LayoutComponentBase
+
+
+@inject ILocalStorage LocalStorage
+@inject AuthService authService
+
+<CascadingValue Value="this" />
+@if (authService.CurrentRoleName == null || authService.CurrentRoleName == "")
+{
+    <main>
+        <div class="top-row px-4">
+            @*<a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>*@
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+}
+else
+{
+
+    <div class="page">
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+
+        <main>
+            <div class="top-row px-4">
+                @*<a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>*@
+            </div>
+
+            <article class="content px-4">
+                @Body
+            </article>
+        </main>
+    </div>
+}
+
+
+@code{
+    protected override async Task OnInitializedAsync()
+    {
+        // if the OnChange event is raised, refresh this view
+        authService.OnChange += () => StateHasChanged();
+
+        await base.OnInitializedAsync();
+    }
+}

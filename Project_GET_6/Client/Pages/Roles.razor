@@ -1,0 +1,48 @@
+﻿@page "/roles"
+@inject IRoleService RoleService
+@inject ILocalStorage LocalStorage
+
+<PageTitle>Roles</PageTitle>
+
+<h3>Roles</h3>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Role ID</th>
+            <th>Role Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var role in RoleService.Roles)
+        {
+            <tr>
+                <td>@role.RoleId</td>
+                <td>@role.RoleName</td>
+                <td><button @onclick="(() => clickedButton())">Add</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await RoleService.GetRoles();
+    }
+
+    protected async void clickedButton()
+    {
+        //var role1 = new Role() { RoleName = "Blabla"};
+        //await RoleService.CreateRole(role1);
+        //role1 = await RoleService.GetRoleWithName(role1.RoleName);
+        //Console.WriteLine(role1.RoleId);
+        //role1.RoleName = "Blabla2";
+        //await RoleService.UpdateRole(role1);
+        await LocalStorage.SaveStringAsync("key", "value");
+        Console.WriteLine(await LocalStorage.GetStringAsync("key"));
+
+        //await RoleService.CreateRole(new Role() { RoleId = 4, RoleName = new string("Blabla") });
+        //await RoleService.GetRoles();
+    }
+}

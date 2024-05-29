@@ -1,0 +1,107 @@
+﻿@page "/error"
+@page "/error/{errortype}"
+
+@inject NavigationManager NavigationManager
+
+
+<h3>Error.</h3>
+@if(errortype == "edituser")
+{
+    <h3>Couldn't update User data.</h3>
+}
+else if (errortype == "createuser")
+{
+    <h3>Couldn't create User.</h3>
+}
+else if (errortype == "deleteuser")
+{
+    <h3>Couldn't delete User.</h3>
+}
+else if (errortype == "createproject")
+{
+    <h3>Couldn't create Project.</h3>
+}
+else if (errortype == "editproject")
+{
+    <h3>Couldn't update Project data.</h3>
+}
+else if (errortype == "deleteproject")
+{
+    <h3>Couldn't delete Project.</h3>
+}
+else if (errortype == "createtask")
+{
+    <h3>Couldn't create Task.</h3>
+}
+<h3><button class="btn btn-primary" @onclick="(() => GoBack())">@message</button></h3>
+
+@code {
+    [Parameter]
+    public string? errortype { get; set; }
+    public string message { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        if(errortype == "edituser")
+        {
+            message = "Go back to Users";
+        }
+        else if (errortype == "createuser")
+        {
+            message = "Go back to Users";
+        }
+        else if (errortype == "deleteuser")
+        {
+            message = "Go back to Users";
+        }
+        else if (errortype == "createproject")
+        {
+            message = "Go back to Projects";
+        }
+        else if (errortype == "editproject")
+        {
+            message = "Go back to Projects";
+        }
+        else if (errortype == "deleteproject")
+        {
+            message = "Go back to Projects";
+        }
+        else if (errortype == "createtask")
+        {
+            message = "Go back to Tasks";
+        }
+    }
+
+    private void GoBack()
+    {
+        if(errortype == "edituser")
+        {
+            NavigationManager.NavigateTo("users");
+        }
+        else if (errortype == "createuser")
+        {
+            NavigationManager.NavigateTo("users");
+        }
+        else if (errortype == "deleteuser")
+        {
+            NavigationManager.NavigateTo("users");
+        }
+        else if (errortype == "createproject")
+        {
+            NavigationManager.NavigateTo("projects");
+        }
+        else if (errortype == "editproject")
+        {
+            NavigationManager.NavigateTo("projects");
+        }
+        else if (errortype == "deleteproject")
+        {
+            NavigationManager.NavigateTo("projects");
+        }
+        else if (errortype == "createtask")
+        {
+            NavigationManager.NavigateTo("tasks");
+        }
+    }
+}

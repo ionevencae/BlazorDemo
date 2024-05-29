@@ -1,0 +1,224 @@
+﻿@page "/"
+@inject ILocalStorage LocalStorage
+@inject NavigationManager NavigationManager
+@inject IUserService UserService
+@inject IRoleService RoleService
+@inject AuthService authService
+
+
+
+<PageTitle>Log In</PageTitle>
+
+@*<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<SurveyPrompt Title="How is Blazor working for you?" />*@
+
+@*<div class="login-page">
+    <div class="form">
+        
+        <form class="login-form" style="background: #640000">
+            <input type="text" placeholder="username" />
+            <input type="password" placeholder="password" />
+            <button>login</button>
+        </form>
+    </div>
+</div>*@
+
+@*<div class="modal-backdrop fade @(show ? "show" : "") @(display ? "d-block" : "d-none")"></div>*@
+
+<div class="modal fade @(show ? "show" : "")  @(display ? "d-block" : "d-none")" tabindex="-1" role="dialog" style="top:20%">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header" style="background: #000066">
+				<h5 class="modal-title" style="color: white">Login Form</h5>
+				
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label for="loginUsername" class="form-label">Username</label>
+					<input type="text" class="form-control" id="loginUsername" placeholder="Username" autocomplete="off" required @bind-value="username" />
+				</div>
+				<div class="mb-3">
+					<label for="loginPassword" class="form-label">Password</label>
+					<input  type="password" class="form-control" id="loginPassword" placeholder="Password" required @bind-value="password" />
+				</div>
+				@if (messageShow)
+				{
+					<div class="mb-3">
+						<label class="form-label" style="color: red">Wrong credentials. Try again.</label>
+					</div>
+				}
+			</div>
+			<div class="mb-3" style="align-self: center; width: 50%; align-content:center">
+				<button type="submit" class="btn btn-success" style="width: 100%" @onclick="EnterClick" @onkeydown="Enter">Log In</button>
+				
+			</div>
+			
+			
+		</div>
+	</div>
+</div>
+
+@*<EditForm Model=@user style="top:20%">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header" style="background: #000066">
+				<h5 class="modal-title" style="color: white">Login Form</h5>
+				
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label for="loginUsername" class="form-label">Username</label>
+					<input type="text" class="form-control" id="loginUsername" placeholder="Username" autocomplete="off" required @bind-value="username" />
+				</div>
+				<div class="mb-3">
+					<label for="loginPassword" class="form-label">Password</label>
+					<input  type="password" class="form-control" id="loginPassword" placeholder="Password" required @bind-value="password" />
+				</div>
+				@if (messageShow)
+				{
+					<div class="mb-3">
+						<label class="form-label" style="color: red">Wrong credentials. Try again.</label>
+					</div>
+				}
+			</div>
+			<div class="mb-3" style="align-self: center; width: 50%; align-content:center">
+				<button type="submit" class="btn btn-success" style="width: 100%" @onclick="EnterClick" @onkeydown="Enter">Log In</button>
+				
+			</div>
+			
+			
+		</div>
+	</div>
+</EditForm>*@
+
+
+@code{
+	private bool show = true, display = true, loggedIn = true, messageShow = false;
+	private string? username;
+	private string? password;
+	private string? message = "prazna";
+
+	private User user = new User { Username = "", Password = "" };
+
+	public string? GetUserName()
+	{
+		return loggedIn ? username : null;
+	}
+
+	public async Task OpenLogin()
+	{
+		display = true;
+		//await Task.Delay(100);
+		show = true;
+	}
+
+	public async Task Logout()
+	{
+		username = null;
+		loggedIn = false;
+		await LocalStorage.RemoveAsync("user");
+	}
+
+	private async Task Close()
+	{
+		show = false;
+		//await Task.Delay(500);
+		display = false;
+	}
+
+	private async Task Login()
+	{
+		if(username == null || username == "" || password == null || password == "")
+		{
+			messageShow = true;
+		}
+		else
+		{
+			User user = new User(){Username = username, Password = password};
+			var ret = await UserService.LoginUser(user);
+			if(ret == null)
+			{
+				Console.WriteLine("Wrong credentials.");
+				messageShow = true;
+			}
+			else
+			{
+				//Console.WriteLine(ret.Name);
+				//Console.WriteLine(ret.Surname);
+				//Console.WriteLine(ret.RoleId);
+				await RoleService.GetRoles();
+				List<Role> allRoles = RoleService.Roles;
+				var currRole = allRoles.FirstOrDefault(sh => sh.RoleId == ret.RoleId);
+				if(currRole == null)
+				{
+					Console.WriteLine("Something went wrong.");
+				}
+				else
+				{
+					await LocalStorage.SaveStringAsync("loggedIn", ret.Username);
+					await LocalStorage.SaveStringAsync("loggedInName", ret.Name);
+					await LocalStorage.SaveStringAsync("loggedInSurname", ret.Surname);
+					await LocalStorage.SaveStringAsync("loggedInRoleName", currRole.RoleName.Replace(" ", "").ToLower());
+					messageShow = false;
+					if (currRole.RoleName.Replace(" ", "").ToLower() == "administrator")
+					{
+						//Console.WriteLine(ret.Username + " " + ret.Password + " " + ret.RoleId);
+						authService.SetCurrentRoleName("administrator");
+						//Console.WriteLine(authService.CurrentRoleName);
+						NavigationManager.NavigateTo("projects");
+					}
+					else if (currRole.RoleName.Replace(" ", "").ToLower() == "projectmanager")
+					{
+						authService.SetCurrentRoleName("projectmanager");
+						NavigationManager.NavigateTo("projects");
+					}
+					else if (currRole.RoleName.Replace(" ", "").ToLower() == "developer")
+					{
+						authService.SetCurrentRoleName("developer");
+						NavigationManager.NavigateTo("tasks");
+					}
+					
+				}
+			}
+			//await Close();
+			//loggedIn = true;
+			//await LocalStorage.SaveStringAsync("user", username);
+			//Console.WriteLine(username);
+			//NavigationManager.NavigateTo("roles");
+		}
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		await base.OnInitializedAsync();
+		//username = await LocalStorage.GetStringAsync("user");
+		//username = null;
+		authService.SetCurrentRoleName("");
+		await LocalStorage.RemoveAsync("loggedIn");
+		await LocalStorage.RemoveAsync("loggedInName");
+		await LocalStorage.RemoveAsync("loggedInSurname");
+		await LocalStorage.RemoveAsync("loggedInRoleName");
+		loggedIn = !string.IsNullOrEmpty(username);
+	}
+
+	private async Task Enter(KeyboardEventArgs e)
+	{
+		if (e.Code == "Enter" || e.Code == "NumpadEnter")
+		{
+			await Login();
+		}
+
+	}
+
+	private async Task EnterClick()
+	{
+		
+		await Login();
+		await Login();
+		
+
+	}
+}
